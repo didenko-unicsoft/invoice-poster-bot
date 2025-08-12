@@ -1,4 +1,5 @@
-const fs = require('fs');
+// syncCatalog.js — короткі повідомлення в TG, ніяких «простинь»
+const fs   = require('fs');
 const path = require('path');
 const { fetchAll } = require('./posterClient');
 
@@ -13,7 +14,6 @@ function send(ctx, msg) {
 async function syncSuppliers(ctx) {
   send(ctx, '🔄 Синхронізую постачальників…');
   const list = await fetchAll(SUPPLIERS_PATH, 500);
-  // лог у файл для відладки (не шлемо у Telegram, щоб не словити 4096-ліміт)
   try { fs.writeFileSync(path.join(__dirname, 'suppliers.json'), JSON.stringify(list, null, 2)); } catch {}
   send(ctx, `✅ Постачальників: ${list.length}`);
   return list.length;
