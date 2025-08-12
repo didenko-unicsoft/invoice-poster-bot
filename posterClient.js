@@ -1,49 +1,41 @@
+// posterClient.js
 const fetch = require('node-fetch');
 
-const POSTER_API_BASE = process.env.POSTER_API_BASE; // напр. https://vfm.joinposter.com/api
-const POSTER_API_TOKEN = process.env.POSTER_API_TOKEN; // твій токен
+const POSTER_API_BASE = process.env.POSTER_API_BASE || 'https://vfm.joinposter.com/api';
+const POSTER_API_TOKEN = process.env.POSTER_API_TOKEN;
 
-async function posterGet(path, params = {}) {
-    const searchParams = new URLSearchParams({
-        token: POSTER_API_TOKEN,
-        ...params
-    });
-
-    const url = `${POSTER_API_BASE}/${path}?${searchParams.toString()}`;
-    console.log(`[Poster API] GET: ${url}`);
-
-    const res = await fetch(url);
-
-    const contentType = res.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-        const text = await res.text();
-        throw new Error(`Poster GET ${path} returned non-JSON: ${text.slice(0, 200)}`);
-    }
-
-    const data = await res.json();
-    if (data.error) {
-        throw new Error(`Poster GET ${path} error: ${JSON.stringify(data)}`);
-    }
-
-    return data.response || [];
+if (!POSTER_API_TOKEN) {
+    console.error('❌ POSTER_API_TOKEN не задано у .env');
+    process.exit(1);
 }
 
-async function paginate(path, limit = 500) {
-    let results = [];
-    let offset = 0;
+/**
+ * Виконує GET-запит до Poster API
+ * @param {string} method - назва методу API, наприклад "menu.getProducts"
+ * @param {object} params - додаткові параметри запиту
+ */
+async function posterGet(method, params = {}) {
+    const url = new URL(`${POSTER_API_BASE}/${method}`);
+    url.searchParams.set('token', POSTER_API_TOKEN);
 
-    while (true) {
-        const chunk = await posterGet(path, { limit, offset });
-        if (!Array.isArray(chunk) || chunk.length === 0) break;
-
-        results = results.concat(chunk);
-        offset += limit;
-        console.log(`[Poster API] ${path}: fetched ${results.length} items so far`);
-
-        if (chunk.length < limit) break; // більше немає даних
+    for (const [key, value] of Object.entries(params)) {
+        url.searchParams.set(key, value);
     }
 
-    return results;
+    console.log(`🌐 Запит до Poster API: ${url}`);
+
+    const res = await fetch(url.toString());
+    if (!res.ok) {
+        throw new Error(`Poster GET ${method} ${res.status}`);
+    }
+
+    const json = await res.json();
+
+    if (json.error) {
+        throw new Error(`Poster API error: ${json.error}`);
+    }
+
+    return json.response || [];
 }
 
-module.exports = { posterGet, paginate };
+module.exports = { posterGet };
