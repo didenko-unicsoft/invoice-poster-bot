@@ -20,6 +20,9 @@ const CREATE_PATH = process.env.POSTER_INVOICE_CREATE_PATH || 'storage.incoming.
 
 const bot = new Telegraf(BOT_TOKEN);
 
+bot.telegram.deleteWebhook().catch(()=>{});
+bot.telegram.getMe().then(me => console.log(`🤖 Bot connected as @${me.username}`));
+
 function ensureChat(chat) {
   try {
     db.prepare('INSERT OR IGNORE INTO chats (chat_id, title, is_group, created_at) VALUES (?,?,?,?)')
