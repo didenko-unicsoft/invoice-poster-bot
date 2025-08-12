@@ -1,11 +1,30 @@
+// syncCatalog.js (drop-in)
 const { db } = require('./db');
-const { paginate } = require('./posterClient');
+const { paginate, posterGet } = require('./posterClient');
 
-const SUPPLIERS_PATH = 'suppliers.getList';
-const PRODUCTS_PATH  = 'products.getList';
+async function pickFirstWorking(paths) {
+  for (const p of paths) {
+    try {
+      const res = await posterGet(p, { page: 1, count: 1 });
+      if (Array.isArray(res)) return p;
+    } catch {}
+  }
+  throw new Error('No working API path found from list: ' + paths.join(', '));
+}
+
+async function resolvePath(kind) {
+  const env = process.env[kind];
+  if (env && env !== 'auto') return env;
+  if (kind === 'POSTER_SUPPLIERS_PATH') {
+    return await pickFirstWorking(['storage.getSuppliers', 'suppliers.getList']);
+  } else {
+    return await pickFirstWorking(['menu.getProducts', 'products.getList']);
+  }
+}
 
 async function syncSuppliers() {
-  const list = await paginate(SUPPLIERS_PATH);
+  const path = await resolvePath('POSTER_SUPPLIERS_PATH');
+  const list = await paginate(path);
   const up = db.prepare(`INSERT INTO suppliers (id,name,raw,updated_at)
                          VALUES (@id,@name,@raw,@ts)
                          ON CONFLICT(id) DO UPDATE SET name=@name, raw=@raw, updated_at=@ts`);
@@ -25,7 +44,8 @@ async function syncSuppliers() {
 }
 
 async function syncProducts() {
-  const list = await paginate(PRODUCTS_PATH);
+  const path = await resolvePath('POSTER_PRODUCTS_PATH');
+  const list = await paginate(path);
   const up = db.prepare(`INSERT INTO products (id,name,sku,unit,active,raw,updated_at)
                          VALUES (@id,@name,@sku,@unit,@active,@raw,@ts)
                          ON CONFLICT(id) DO UPDATE SET name=@name, sku=@sku, unit=@unit, active=@active, raw=@raw, updated_at=@ts`);
