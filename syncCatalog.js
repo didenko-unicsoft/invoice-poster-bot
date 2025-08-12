@@ -3,35 +3,41 @@ const fs = require('fs');
 const path = require('path');
 const { posterGet } = require('./posterClient');
 
+function send(ctx, message) {
+    if (ctx && ctx.reply) {
+        ctx.reply(message);
+    } else {
+        console.log(message);
+    }
+}
+
 async function syncSuppliers(ctx) {
-    ctx.reply('🔄 Синхронізація постачальників...');
+    send(ctx, '🔄 Синхронізація постачальників...');
     try {
         const suppliers = await paginate('storage.getSuppliers');
-        
-        // Зберігаємо у файл для відладки
+
         const suppliersFile = path.join(__dirname, 'suppliers.json');
         fs.writeFileSync(suppliersFile, JSON.stringify(suppliers, null, 2));
 
-        ctx.reply(`✅ Синхронізовано постачальників: ${suppliers.length}`);
+        send(ctx, `✅ Синхронізовано постачальників: ${suppliers.length}`);
     } catch (err) {
         console.error('Помилка syncSuppliers:', err);
-        ctx.reply(`❌ Помилка синхронізації постачальників: ${err.message}`);
+        send(ctx, `❌ Помилка синхронізації постачальників: ${err.message}`);
     }
 }
 
 async function syncProducts(ctx) {
-    ctx.reply('🔄 Синхронізація товарів...');
+    send(ctx, '🔄 Синхронізація товарів...');
     try {
         const products = await paginate('menu.getProducts');
-        
-        // Зберігаємо у файл для відладки
+
         const productsFile = path.join(__dirname, 'products.json');
         fs.writeFileSync(productsFile, JSON.stringify(products, null, 2));
 
-        ctx.reply(`✅ Синхронізовано товари: ${products.length}`);
+        send(ctx, `✅ Синхронізовано товари: ${products.length}`);
     } catch (err) {
         console.error('Помилка syncProducts:', err);
-        ctx.reply(`❌ Помилка синхронізації товарів: ${err.message}`);
+        send(ctx, `❌ Помилка синхронізації товарів: ${err.message}`);
     }
 }
 
